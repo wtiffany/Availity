@@ -32,8 +32,8 @@ class InsuranceProcessor:
 
         # Sort by first and last name.
         for insurance_company, records in self.insurance_to_records.items():
-            self.insurance_to_records[insurance_company].sort(key=lambda x: (x.last_name, x.first_name),
-                                                              reverse=True)
+            self.insurance_to_records[insurance_company].sort(
+                key=lambda x: (x.last_name, x.first_name))
 
     def writeToFiles(self):
         self.populateInsuranceToRecords()
@@ -142,18 +142,18 @@ class UnitTests(unittest.TestCase):
         # record will be lexicographically the latest. The last record will be lexicographically the first.
         self.assertListEqual(processor.insurance_to_records[insurance_company_1],
                              [
-                                 # Jon Snow
+                                 # The Hound
                                  InsuranceRecord("%s,%s,%d,%s" % (
-                                     user_id_3, first_and_last_name_3, 3, insurance_company_1)),
+                                     user_id_1, first_and_last_name_1, 1, insurance_company_1)),
+                                 # Jamie Lannister is before Tyrion because J is in ascending order from T.
+                                 InsuranceRecord("%s,%s,%d,%s" % (
+                                     user_id_4, first_and_last_name_4, 4, insurance_company_1)),
                                  # Tyrion Lannister
                                  InsuranceRecord("%s,%s,%d,%s" % (
                                      user_id_2, first_and_last_name_2, 2, insurance_company_1)),
-                                 # Jamie Lannister is after Tyrion because J is in ascending order from T.
+                                 # Jon Snow
                                  InsuranceRecord("%s,%s,%d,%s" % (
-                                     user_id_4, first_and_last_name_4, 4, insurance_company_1)),
-                                 # The Hound
-                                 InsuranceRecord("%s,%s,%d,%s" % (
-                                     user_id_1, first_and_last_name_1, 1, insurance_company_1))
+                                     user_id_3, first_and_last_name_3, 3, insurance_company_1))
         ])
 
     def test_shouldPopulateFromFile(self):
