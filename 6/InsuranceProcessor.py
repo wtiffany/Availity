@@ -5,7 +5,7 @@ import unittest
 
 class InsuranceProcessor:
     def __init__(self, filename=None):
-        self.id_to_record = {}
+        self.insurance_to_id_to_record = collections.defaultdict(dict)
         if filename is not None:
             # Open the file and convert its contents into InsuranceRecord objects.
             with open(filename, "r") as f:
@@ -15,20 +15,22 @@ class InsuranceProcessor:
     def addInsuranceRecord(self, csv_string):
         record = InsuranceRecord(csv_string.strip())
         # This user was seen before. Only overwrite if it is a newer version.
-        if record.user_id in self.id_to_record:
-            existing_record = self.id_to_record[record.user_id]
+        if record.user_id in self.insurance_to_id_to_record[record.insurance_company]:
+            existing_record = self.insurance_to_id_to_record[record.insurance_company][record.user_id]
             if record.version < existing_record.version:
                 # Return, as the existing record is newer.
                 return
         # If there is no existing record, or the existing record is older, add
         # the record to the record map.
-        self.id_to_record[record.user_id] = record
+        self.insurance_to_id_to_record[record.insurance_company][record.user_id] = record
 
     def populateInsuranceToRecords(self):
         self.insurance_to_records = collections.defaultdict(list)
         # Group everything by insurance company
-        for record in self.id_to_record.values():
-            self.insurance_to_records[record.insurance_company].append(record)
+        for values in self.insurance_to_id_to_record.values():
+            for record in values.values():
+                self.insurance_to_records[record.insurance_company].append(
+                    record)
 
         # Sort by first and last name.
         for insurance_company, records in self.insurance_to_records.items():
@@ -74,7 +76,7 @@ class UnitTests(unittest.TestCase):
             user_id, first_and_last_name, 1, insurance_company_1))
 
         # Extract record given the user id
-        record = processor.id_to_record[user_id]
+        record = processor.insurance_to_id_to_record[insurance_company_1][user_id]
 
         # Assert it is the record that we are expecting
         self.assertEqual(record.name, first_and_last_name)
@@ -84,28 +86,28 @@ class UnitTests(unittest.TestCase):
     def test_shouldOnlyKeepMostRecentVersion(self):
         # Define test constants
         user_id = "user_id_1"
-        first_and_last_name = "Jon Snow"
+        first_and_last_name_1 = "Jon Snow"
+        first_and_last_name_2 = "Samwell Tarley"
+        first_and_last_name_3 = "Night King"
         insurance_company_1 = "Insurance Co 1"
-        insurance_company_2 = "Insurance Co 2"
-        insurance_company_3 = "Insurance Co 3"
 
         # Construct processor instance
         processor = InsuranceProcessor()
 
         # Add records to the processor
         processor.addInsuranceRecord("%s,%s,%d,%s" % (
-            user_id, first_and_last_name, 1, insurance_company_1))
+            user_id, first_and_last_name_1, 1, insurance_company_1))
         processor.addInsuranceRecord("%s,%s,%d,%s" % (
-            user_id, first_and_last_name, 3, insurance_company_3))
+            user_id, first_and_last_name_3, 3, insurance_company_1))
         processor.addInsuranceRecord("%s,%s,%d,%s" % (
-            user_id, first_and_last_name, 2, insurance_company_2))
+            user_id, first_and_last_name_2, 2, insurance_company_1))
 
         # Extract record given the user id
-        record = processor.id_to_record[user_id]
+        record = processor.insurance_to_id_to_record[insurance_company_1][user_id]
 
         # Assert it is the record that we are expecting
-        self.assertEqual(record.name, first_and_last_name)
-        self.assertEqual(record.insurance_company, insurance_company_3)
+        self.assertEqual(record.name, first_and_last_name_3)
+        self.assertEqual(record.insurance_company, insurance_company_1)
         self.assertEqual(record.version, 3)
 
     def test_shouldGroupByInsuranceCompany(self):
@@ -160,8 +162,11 @@ class UnitTests(unittest.TestCase):
         # Construct processor instance
         processor = InsuranceProcessor("test.csv")
 
-        # Assert that we read in all of the records.
-        self.assertEqual(len(processor.id_to_record), 36)
+        # Assert that there are 3 insurance providers.
+        self.assertEqual(len(processor.insurance_to_id_to_record), 3)
+        self.assertEqual(len(processor.insurance_to_id_to_record["co_1"]), 30)
+        self.assertEqual(len(processor.insurance_to_id_to_record["co_2"]), 29)
+        self.assertEqual(len(processor.insurance_to_id_to_record["co_3"]), 31)
 
     def test_shouldWriteOutToFile(self):
         # Construct processor instance
